@@ -6,7 +6,10 @@ public:
     LinkedList() : head(nullptr) {}
     ~LinkedList();
 
-    
+    bool push();
+    bool pop();
+    Data peek();
+    bool isEmpty();
 private:
     T *head;
 }
