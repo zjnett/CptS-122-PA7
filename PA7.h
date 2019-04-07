@@ -1,13 +1,17 @@
 #pragma once
 
+#define _CRT_SECURE_NO_WARNINGS
+
 #include <iostream>
 #include <string>
 #include <fstream>
+#include <ctime>
 
-void printMenu();
-
-void printSubMenu();
-
-void clearScreen();
-
-void systemPause();
+enum Status {
+	NOT_LOADED,
+	COURSE_LOADED,
+	MASTER_LOADED,
+	MASTER_MOD,
+	MASTER_SAVED,
+	ERROR
+};
