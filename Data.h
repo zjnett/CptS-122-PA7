@@ -20,6 +20,9 @@ public:
 		units = old.getUnits();
 		major = old.getMajor();
 		level = old.getLevel();
+		numAbsences = old.getNumAbsences();
+		absenceInfo = old.getStack();
+		return *this;
 	}
 
     //Setters
@@ -31,6 +34,7 @@ public:
     void setMajor(string newMajor) { major = newMajor; }
     void setLevel(string newLevel) { level = newLevel; }
 	void setNumAbsences(int newNum) { numAbsences = newNum; }
+	void setStack(Stack newStack) { absenceInfo = newStack; }
 
     //Getters
     int getRecord() { return recordNumber; }
@@ -41,6 +45,7 @@ public:
     string getMajor() { return major; }
     string getLevel() { return level; }
 	int getNumAbsences() { return numAbsences; }
+	Stack getStack() { return absenceInfo; }
 
 	friend ostream& operator<<(ostream &lhs, Data &rhs);
 

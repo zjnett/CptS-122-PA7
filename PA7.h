@@ -6,6 +6,8 @@
 #include <string>
 #include <fstream>
 #include <ctime>
+#include <algorithm>
+#include <vector>
 
 enum Status {
 	NOT_LOADED,

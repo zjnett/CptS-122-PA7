@@ -29,6 +29,8 @@ public:
 	
 	ListNode<T> *getHead() { return head; }
 
+	void setHead(ListNode<T> *newHead) { head = newHead; }
+
 	/*void printList() {
 		ListNode<T> *temp = head;
 		while (temp->getNext() != nullptr) {

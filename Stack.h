@@ -3,13 +3,14 @@
 #include "PA7.h"
 
 using std::string;
+using std::vector;
 
 class Stack {
 public:
-	Stack();
+	Stack() {}
 	~Stack() {}
 
-	bool push(string newAbsence);
+	void push(string newAbsence);
 
 	void pop();
 
@@ -18,5 +19,5 @@ public:
 	bool isEmpty();
 
 private:
-	string stackData[100];
+	vector<string> stackData;
 };

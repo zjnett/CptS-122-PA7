@@ -8,6 +8,7 @@ using std::fstream;
 using std::cout;
 using std::cin;
 using std::endl;
+using std::to_string;
 
 /* Code to get current time:
 (assuming struct and t have been declared)
@@ -29,6 +30,7 @@ int main(void) {
     int selection = 0, subselection = 0;
     bool running = true;
 
+	// Main Program Loop
     while (running) {
         appMenu.clearScreen();
         appMenu.printMenu(currentStatus);
@@ -93,14 +95,18 @@ int main(void) {
 
 				masterfile.open("master.txt");
 				if (currentStatus == NOT_LOADED || currentStatus == ERROR && masterfile.is_open()) {
+					int numProcessed = 1;
+					//Skip initial item (numerator, which is instead processed internally)
+					masterfile.getline(buffer, 50, ',');
 					while (!masterfile.eof()) {
 						Data newRecord;
 						//Set record information in order
+						newRecord.setRecord(numProcessed++);
 						masterfile.getline(buffer, 50, ',');
 						newRecord.setID(atoi(buffer));
 						masterfile.getline(buffer, 50, ',');
 						masterfile.getline(buffertwo, 50, ',');
-						strcat(buffer, ", ");
+						strcat(buffer, ",");
 						strcat(buffer, buffertwo);
 						newRecord.setName(buffer);
 						masterfile.getline(buffer, 50, ',');
@@ -111,8 +117,23 @@ int main(void) {
 						newRecord.setMajor(buffer);
 						masterfile.getline(buffer, 50, ',');
 						newRecord.setLevel(buffer);
-						newRecord.setNumAbsences(0);
+						masterfile.getline(buffer, 50, ',');
+						newRecord.setNumAbsences(atoi(buffer));
+
+						//Declare absences data structure before loop (prevent overwriting)
+						Stack absences;
+						int numIterations = newRecord.getNumAbsences();
+						for (int i = 0; i < numIterations; i++) {
+							//read in absences
+							masterfile.getline(buffer, 50, ',');
+							string processed = buffer;
+							processed.erase(std::remove(processed.begin(), processed.end(), '\n'), processed.end());
+							absences.push(processed);
+							newRecord.setStack(absences);
+						}
 						records.insertAtFront(newRecord);
+						//Read and ignore garbage newline
+						masterfile.getline(buffer, 50, ',');
 					}
 					currentStatus = MASTER_LOADED;
 					cout << "master.txt imported successfully!" << endl;
@@ -133,10 +154,37 @@ int main(void) {
             case 3: //Store master list
 			{
 				appMenu.clearScreen();
-				if (currentStatus == MASTER_LOADED || currentStatus == MASTER_SAVED || currentStatus == COURSE_LOADED) { // at least one type of list is loaded
-
+				if (currentStatus == MASTER_LOADED || currentStatus == MASTER_MOD || currentStatus == COURSE_LOADED || currentStatus == MASTER_SAVED) { // at least one type of list is loaded
+					fstream mastersave;
+					mastersave.open("master.txt");
+					int tracker = 1;
+					if (mastersave.is_open()) {
+						ListNode<Data> *temp = records.getHead();
+						while (temp != nullptr) {
+							Data currentRecord = temp->getData();
+							mastersave << tracker++ << "," << currentRecord.getID() << "," << currentRecord.getName() << ","
+								<< currentRecord.getEmail() << "," << currentRecord.getUnits() << "," << currentRecord.getMajor() << ","
+								<< currentRecord.getLevel() << "," << currentRecord.getNumAbsences() << ",";
+							if (currentRecord.getNumAbsences() > 0) {
+								Stack tempStack = currentRecord.getStack();
+								for (int i = 0; i < currentRecord.getNumAbsences(); i++) {
+									mastersave << tempStack.peek() << ",";
+									tempStack.pop();
+									if (tempStack.isEmpty()) {
+										mastersave << endl;
+									}
+								}
+							} else {
+								mastersave << endl;
+							}
+							temp = temp->getNext();
+						}
+						mastersave.close();
+						currentStatus = MASTER_SAVED;
+					}
+				} else {
+					cout << "Error - No current list loaded to store!" << endl;
 				}
-				currentStatus = MASTER_SAVED;
 				break;
 			}
             case 4: //Mark absences
@@ -145,7 +193,17 @@ int main(void) {
 				appMenu.clearScreen();
 				ListNode<Data> *temp = records.getHead();
 				while (temp != nullptr) {
-					cout << temp->getData().getRecord() << " - " << temp->getData().getName() << endl;
+					char in = '\0';
+					cout << temp->getData().getRecord() << " - " << temp->getData().getName()  << ": is this student absent today? [Y/N]: ";
+					cin >> in;
+					if (toupper(in) == 'Y') {
+						Data current = temp->getData();
+						int numA = current.getNumAbsences();
+						current.setNumAbsences(numA + 1);
+						string date = to_string((now->tm_year + 1900)) + "-" + to_string((now->tm_mon + 1)) + "-" + to_string(now->tm_mday);
+						current.getStack().push(date);
+						temp->setData(current);
+					}
 					temp = temp->getNext();
 				}
 				currentStatus = MASTER_MOD;
