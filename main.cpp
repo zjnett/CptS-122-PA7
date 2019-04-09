@@ -1,3 +1,11 @@
+/*
+Programmer: Zach Nett
+Class: CptS 122; Lab Section 5
+Programming Assignment: PA7
+File: main.cpp
+Description: This program tracks attendance for a class, which can be viewed, modified, and have reports made based on.
+*/
+
 #include "PA7.h"
 #include "LinkedList.h"
 #include "Data.h"
@@ -9,14 +17,6 @@ using std::cout;
 using std::cin;
 using std::endl;
 using std::to_string;
-
-/* Code to get current time:
-(assuming struct and t have been declared)
-    cout << (now->tm_year + 1900) << '-'
-    << (now->tm_mon + 1) << '-'
-    << now->tm_mday
-    << endl;
-*/
 
 int main(void) {
 	Menu appMenu;
@@ -56,7 +56,7 @@ int main(void) {
 						newRecord.setID(atoi(buffer));
 						infile.getline(buffer, 50, ',');
 						infile.getline(buffertwo, 50, ',');
-						strcat(buffer, ", ");
+						strcat(buffer, ",");
 						strcat(buffer, buffertwo);
 						newRecord.setName(buffer);
 						infile.getline(buffer, 50, ',');
@@ -66,7 +66,14 @@ int main(void) {
 						infile.getline(buffer, 50, ',');
 						newRecord.setMajor(buffer);
 						infile.getline(buffer, 50, ',');
-						newRecord.setLevel(buffer);
+						//Remove newline from buffer
+						string processed = buffer;
+						processed.erase(std::remove(processed.begin(), processed.end(), '\n'), processed.end());
+						//Solution for removing non-alpha numeric characters from string using STL provided by "songyuanyao",
+						//https://stackoverflow.com/questions/28491954/remove-non-alphabet-characters-from-string-c
+						//Removes over-read characters after deleting newline. This is done to comply with the provided .csv file.
+						processed.erase(std::remove_if(processed.begin(), processed.end(), [](char c) { return !isalpha(c); }), processed.end());
+						newRecord.setLevel(processed);
 						newRecord.setNumAbsences(0);
 
 						//Insert student record into list
@@ -191,45 +198,294 @@ int main(void) {
 			{
 				//Print Records
 				appMenu.clearScreen();
-				ListNode<Data> *temp = records.getHead();
-				while (temp != nullptr) {
-					char in = '\0';
-					cout << temp->getData().getRecord() << " - " << temp->getData().getName()  << ": is this student absent today? [Y/N]: ";
-					cin >> in;
-					if (toupper(in) == 'Y') {
-						Data current = temp->getData();
-						int numA = current.getNumAbsences();
-						current.setNumAbsences(numA + 1);
-						string date = to_string((now->tm_year + 1900)) + "-" + to_string((now->tm_mon + 1)) + "-" + to_string(now->tm_mday);
-						current.getStack().push(date);
-						temp->setData(current);
+				if (currentStatus != ERROR && currentStatus != NOT_LOADED) {
+					LinkedList<Data> tempList = records;
+					ListNode<Data> *temp = tempList.getHead();
+					while (temp != nullptr) {
+						char in = '\0';
+						cout << temp->getData().getRecord() << " - " << temp->getData().getName() << ": is this student absent today? [Y/N]: ";
+						cin >> in;
+						if (toupper(in) == 'Y') {
+							Data current = temp->getData();
+							int numA = current.getNumAbsences();
+							current.setNumAbsences(numA + 1);
+							string date = to_string((now->tm_year + 1900)) + "-" + to_string((now->tm_mon + 1)) + "-" + to_string(now->tm_mday);
+							date.erase(std::remove(date.begin(), date.end(), '\n'), date.end());
+							Stack absences = current.getStack();
+							absences.push(date);
+							current.setStack(absences);
+							temp->setData(current);
+						}
+						temp = temp->getNext();
 					}
-					temp = temp->getNext();
+					records = tempList;
+					currentStatus = MASTER_MOD;
 				}
-				currentStatus = MASTER_MOD;
+				else {
+					cout << "Error - Could not mark absences, do you have a list loaded?" << endl;
+				}
 				appMenu.systemPause();
 				break;
 			}
             case 5: //Generate report
+			{
 				appMenu.clearScreen();
-                appMenu.printSubMenu();
-                cin >> subselection;
-                if (subselection == 1) {
+				if (currentStatus != ERROR && currentStatus != NOT_LOADED) {
+					appMenu.printSubMenu();
+					cin >> subselection;
+					if (subselection == 1) { // Generates a report with only the most recent absence
+						appMenu.clearScreen();
+						fstream absencesReport;
+						absencesReport.open("absencesReport.txt");
+						if (absencesReport.is_open()) {
+							LinkedList<Data> tempList = records;
+							ListNode<Data> *temp = tempList.getHead();
+							while (temp != nullptr) {
+								Stack absences = temp->getData().getStack();
+								absencesReport << temp->getData().getName() << ", most recent absence: " << absences.peek() << endl;
+								temp = temp->getNext();
+							}
+							cout << "Report written to absencesReport.txt successfully!" << endl;
+							absencesReport.close();
+						}
+						else {
+							cout << "Error - Cannot open absencesReport.txt for writing." << endl;
+						}
+					}
+					else if (subselection == 2) { // Generates a report with absences that meet or exceed a number.
+						appMenu.clearScreen();
+						int atLeast = 0;
+						fstream absencesExceeding;
+						absencesExceeding.open("exceedingAbsencesReport.txt");
+						if (absencesExceeding.is_open()) {
+							cout << "Generate a report of students with at least how many absences?: ";
+							cin >> atLeast;
+							LinkedList<Data> tempList = records;
+							ListNode<Data> *temp = tempList.getHead();
+							absencesExceeding << "Students with Absences Exceeding " << atLeast << ":" << endl;
+							while (temp != nullptr) {
+								if (temp->getData().getNumAbsences() >= atLeast) {
+									//Generate line on report for student
+									absencesExceeding << temp->getData().getName() << endl;
+								}
+								temp = temp->getNext();
+							}
+							cout << "Report written to exceedingAbsencesReport.txt successfully!" << endl;
+							absencesExceeding.close();
+						}
+						else {
+							cout << "Error - Cannot open exceedingAbsencesReport.txt for writing." << endl;
+						}
+					}
+					else {
+						cout << "Error: Invalid selection." << endl;
+					}
+				}
+				else {
+					cout << "Error - Could not generate report, do you have a list loaded?" << endl;
+				}
+				appMenu.systemPause();
+				break;
+			}
+            case 6: //Edit
+			{
+				appMenu.clearScreen();
+				if (currentStatus != ERROR && currentStatus != NOT_LOADED) {
+					int select = 0;
+					bool found = false;
+					cout << "Would you like to edit based on student name [1] or ID [2]? ";
+					cin >> select;
+					if (select == 1) {
+						string last, first, name;
+						cout << "What is the student's last name? ";
+						cin >> last;
+						cout << "What is the student's first name? ";
+						cin >> first;
+						name = "\"" + last + "," + first + "\"";
 
-                } else if (subselection == 2) {
+						//Linear search based on name
+						//LinkedList<Data> tempList = records;
+						ListNode<Data> *temp = records.getHead();
+						while (temp != nullptr) {
+							if (temp->getData().getName().compare(name) == 0) {
+								//found at current node
+								found = true;
+								break;
+							}
+							temp = temp->getNext();
+						}
 
-                } else {
-                    cout << "Error: Invalid selection." << endl;
-                }
-                appMenu.systemPause();
-                break;
-            case 6: //Exit
-                running = false;
-                break;
+						if (found) {
+							string date;
+							cout << temp->getData().getName() << " found..." << endl;
+							if (temp->getData().getNumAbsences() > 0) {
+								bool foundDate = false;
+								cout << "What date was the student found to be present on? YYYY-M-D: ";
+								cin >> date;
+								Data currentData = temp->getData();
+								Stack copy = temp->getData().getStack();
+								Stack tempStack = temp->getData().getStack();
+								while (!tempStack.isEmpty()) {
+									if (tempStack.peek().compare(date) == 0) {
+										foundDate = true;
+										break;
+									}
+									tempStack.pop();
+								}
+
+								if (foundDate) {
+									//Using stack, create a temporary list of dates except for the found, then reconstruct a stack.
+									//Then replace the stack in the parent LinkedList with the new constructed stack.
+									LinkedList<string> dateList;
+									tempStack = copy; //reset tempStack
+									while (!tempStack.isEmpty()) {
+										if (tempStack.peek().compare(date) != 0) {
+											dateList.insertAtFront(tempStack.peek());
+										}
+										tempStack.pop();
+									}
+									Stack newStack;
+									ListNode<string> *dateListNode = dateList.getHead();
+									while (dateListNode != nullptr) {
+										string tempStr = dateListNode->getData();
+										newStack.push(tempStr);
+										dateListNode = dateListNode->getNext();
+									}
+									currentData.setStack(newStack);
+									int n = temp->getData().getNumAbsences();
+									currentData.setNumAbsences(n - 1);
+									temp->setData(currentData);
+									currentStatus = MASTER_MOD;
+									cout << "Absence successfully removed!" << endl;
+								}
+								else {
+									cout << "Could not find date that student was absent on!" << endl;
+								}
+							}
+							else {
+								char sel = '\0';
+								cout << "However, there are no absences logged for this student." << endl;
+								cout << "Would you like to log one? [Y/N] ";
+								cin >> sel;
+								if (toupper(sel) == 'Y') {
+									cout << "What date was this student absent on? YYYY-M-D: ";
+									cin >> date;
+									int n = temp->getData().getNumAbsences();
+									temp->getData().setNumAbsences(n + 1);
+									Stack tempStack = temp->getData().getStack();
+									tempStack.push(date);
+									temp->getData().setStack(tempStack);
+								}
+							}
+							currentStatus = MASTER_MOD;
+							//records = tempList;
+						}
+						else {
+							cout << "Student with a name of " << name << " could not be found." << endl;
+						}
+					}
+					else if (select == 2) {
+						int id;
+						cout << "What is the student's ID? ";
+						cin >> id;
+
+						//Linear search based on ID
+						LinkedList<Data> tempList = records;
+						ListNode<Data> *temp = tempList.getHead();
+						while (temp != nullptr) {
+							if (temp->getData().getID() == id) {
+								//found at current node
+								found = true;
+								break;
+							}
+							temp = temp->getNext();
+						}
+
+						if (found) {
+							string date;
+							cout << temp->getData().getName() << " found..." << endl;
+							if (temp->getData().getNumAbsences() > 0) {
+								bool foundDate = false;
+								cout << "What date was the student found to be present on? YYYY-M-D: ";
+								cin >> date;
+								Data currentData = temp->getData();
+								Stack copy = temp->getData().getStack();
+								Stack tempStack = temp->getData().getStack();
+								while (!tempStack.isEmpty()) {
+									if (tempStack.peek().compare(date) == 0) {
+										foundDate = true;
+										break;
+									}
+									tempStack.pop();
+								}
+
+								if (foundDate) {
+									//Using stack, create a temporary list of dates except for the found, then reconstruct a stack.
+									//Then replace the stack in the parent LinkedList with the new constructed stack.
+									LinkedList<string> dateList;
+									tempStack = copy; //reset tempStack
+									while (!tempStack.isEmpty()) {
+										if (tempStack.peek().compare(date) != 0) {
+											dateList.insertAtFront(tempStack.peek());
+										}
+										tempStack.pop();
+									}
+									Stack newStack;
+									ListNode<string> *dateListNode = dateList.getHead();
+									while (dateListNode != nullptr) {
+										string tempStr = dateListNode->getData();
+										newStack.push(tempStr);
+										dateListNode = dateListNode->getNext();
+									}
+									currentData.setStack(newStack);
+									int n = temp->getData().getNumAbsences();
+									currentData.setNumAbsences(n - 1);
+									temp->setData(currentData);
+									currentStatus = MASTER_MOD;
+									cout << "Absence successfully removed!" << endl;
+								}
+								else {
+									cout << "Could not find date that student was absent on!" << endl;
+								}
+							}
+							else {
+								char sel = '\0';
+								cout << "However, there are no absences logged for this student." << endl;
+								cout << "Would you like to log one? [Y/N] ";
+								cin >> sel;
+								if (toupper(sel) == 'Y') {
+									cout << "What date was this student absent on? YYYY-M-D: ";
+									cin >> date;
+									int n = temp->getData().getNumAbsences();
+									temp->getData().setNumAbsences(n + 1);
+									Stack tempStack = temp->getData().getStack();
+									tempStack.push(date);
+									temp->getData().setStack(tempStack);
+								}
+							}
+							currentStatus = MASTER_MOD;
+							//records = tempList;
+						}
+						else {
+							cout << "Student with an ID of " << id << " could not be found." << endl;
+						}
+					}
+					else {
+						cout << "Error - Could not parse response." << endl;
+					}
+				}
+				else {
+					cout << "Error - Cannot edit absences of unloaded course! Please load master.txt or classList.csv first." << endl;
+				}
+				appMenu.systemPause();
+				break;
+			}
+			case 7: //Exit
+				running = false;
+				break;
             default:
                 break;
         }
     }
-
     return 0;
 }

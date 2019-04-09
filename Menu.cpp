@@ -1,9 +1,19 @@
+/*
+Programmer: Zach Nett
+Class: CptS 122; Lab Section 5
+Programming Assignment: PA7
+File: Menu.cpp
+Description: This program tracks attendance for a class, which can be viewed, modified, and have reports made based on.
+*/
+
 #include "Menu.h"
 
 using std::cout;
 using std::endl;
 using std::cin;
 
+//printMenu function to print menu art and options.
+//As usual, ASCII art generated on patorjk.
 void Menu::printMenu(Status currentStatus) {
 	//cout << "\u001b[34;1m" << endl; // Bright Blue
 	colorPicker(currentStatus);
@@ -21,10 +31,12 @@ void Menu::printMenu(Status currentStatus) {
     cout << "\t3.    Store master list" << endl << endl;
     cout << "\t4.    Mark absences" << endl << endl;
     cout << "\t5.    Generate report" << endl << endl;
-    cout << "\t6.    Exit" << endl << endl;
+	cout << "\t6.    Edit absences" << endl << endl;
+    cout << "\t7.    Exit" << endl << endl;
 	printStatus(currentStatus);
 }
 
+//printStatus to print currentStatus enumerated variable (status of list loaded/modified/etc.)
 void Menu::printStatus(Status currentStatus) {
 	//Note that the function uses ANSI escape sequences for colors, which change dependent on system.
 	switch (currentStatus) {
@@ -68,6 +80,7 @@ void Menu::printStatus(Status currentStatus) {
 	cout << "\u001b[0m";
 }
 
+//printSubMenu function to print submenu for generating reports.
 void Menu::printSubMenu() {
     cout << endl << "1. Generate report for all students; showing only the most recent absence for each student." << endl;
     cout << "2. Generate report for students with absences that match or exceed..." << endl;
@@ -81,6 +94,7 @@ void Menu::clearScreen() {
     system("cls");
 }
 
+// Cross Platform Pause Support
 void Menu::systemPause() {
     cin.ignore(1024, '\n');
     cout << "Press enter to continue..." << endl;
@@ -89,7 +103,7 @@ void Menu::systemPause() {
     //system("pause");
 }
 
-// Code more or less identical from printStatus(), except just the ANSI color codes.
+//colorPicker function -- code more or less identical from printStatus(), except just the ANSI color codes.
 void Menu::colorPicker(Status currentStatus) {
 	switch (currentStatus) {
 		case NOT_LOADED: // Light Red (c/12)
